@@ -22,8 +22,8 @@ To get started with xv6-labs, follow the steps below:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/ahmedanwar123/xv6-labs.git
-   cd xv6-labs
+   git clone https://github.com/ahmedanwar123/xv6-labs-2024.git
+   cd xv6-labs-2024
    ```
 2. Build the project:
 
