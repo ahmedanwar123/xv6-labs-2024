@@ -35,3 +35,13 @@ To get started with xv6-labs, follow the steps below:
    ```bash
    make qemu
    ```
+4. Start testing
+   ```bash
+   $ find . b
+   ```
+   ```bash
+   $ echo hello too | xargs echo bye
+   ```
+   ```bash
+   $ find . b | xargs grep hello
+   ```
