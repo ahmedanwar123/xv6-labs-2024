@@ -194,9 +194,10 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-	_sleep\
-	_primes\
-	_pingpong\
+	$U/_sleep\
+	$U/_primes\
+	$U/_pingpong\
+	$U/_find\
 
 
 ifeq ($(LAB),syscall)
