@@ -2,7 +2,8 @@
 
 ## Introduction
 
-This repository contains the implementation of the xv6 operating system labs, aimed at enhancing understanding of operating systems concepts. The xv6 is a simple Unix-like teaching operating system developed at MIT, which serves as a useful platform for exploring fundamental OS principles.
+This repository contains the implementation of the xv6 operating system labs.
+Done by me, Ahmed Anwar Gad
 
 ## Getting Started
 
