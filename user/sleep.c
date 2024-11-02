@@ -1,13 +1,3 @@
-/**
- * @file sleep.c
- * @author Abdelrahman Amr Elsayed (abdelrahman.elsayed@ejust.edu.eg) , ID :120210128
- * @brief 
- * @version 0.1
- * @date 2024-10-26
- * 
- * @copyright Copyright (c) 2024
- * 
- */
 #include "types.h"
 #include "user.h"
 
