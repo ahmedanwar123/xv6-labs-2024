@@ -1,99 +1,88 @@
-
 #include "kernel/types.h"
 #include "user/user.h"
 
-#define MAX_NUM 290
-#define READ 0
-#define WRITE 1
-#define INT_SIZE 4
+int prime_filter(int pipe_input[]) __attribute__((noreturn));
 
-// Forward declaration with noreturn
-int new_proc(int left[]) __attribute__((noreturn));
-
-// Function to create a new process and filter primes
-int new_proc(int left[])
+int prime_filter(int pipe_input[])
 {
-  int prime, temp, pid;
-  int right[2];
+    int prime, number, pid;
+    int pipe_output[2];
 
-  close(left[WRITE]); // Close the write end of the pipe for reading
+    close(pipe_input[1]);
 
-  // Read the first prime number
-  if (read(left[READ], &prime, INT_SIZE) <= 0)
-  {
-    close(left[READ]);
-    exit(0); // Exit if no prime is found
-  }
-
-  printf("prime %d\n", prime);
-
-  // Create a new pipe for the next process
-  pipe(right);
-
-  if ((pid = fork()) < 0)
-  { // Fork error
-    close(right[WRITE]);
-    close(right[READ]);
-    close(left[READ]);
-    fprintf(1, "primes: fork failed\n");
-    exit(-1);
-  }
-  else if (pid > 0)
-  {                     // Parent process
-    close(right[READ]); // Close unused read end in the parent
-
-    // Filter and write non-multiples of the prime to the next pipe
-    while (read(left[READ], &temp, INT_SIZE) > 0)
+    if (read(pipe_input[0], &prime, 4) <= 0)
     {
-      if (temp % prime != 0)
-      {
-        write(right[WRITE], &temp, INT_SIZE);
-      }
+        close(pipe_input[0]);
+        exit(0);
     }
 
-    close(right[WRITE]); // Close the write end of the right pipe
-    close(left[READ]);   // Close the read end of the left pipe
+    printf("prime %d\n", prime);
 
-    wait(0); // Wait for the child process to finish
-    exit(0);
-  }
-  else
-  {                    // Child process
-    close(left[READ]); // Close the left pipe completely for the child
-    new_proc(right);   // Recursively create new processes
-  }
+    pipe(pipe_output);
+
+    if ((pid = fork()) < 0)
+    {
+        close(pipe_output[1]);
+        close(pipe_output[0]);
+        close(pipe_input[0]);
+        fprintf(1, "primes: fork failed\n");
+        exit(-1);
+    }
+    else if (pid > 0)
+    {
+        close(pipe_output[0]);
+
+        while (read(pipe_input[0], &number, 4) > 0)
+        {
+            if (number % prime != 0)
+            {
+                write(pipe_output[1], &number, 4);
+            }
+        }
+
+        close(pipe_output[1]);
+        close(pipe_input[0]);
+
+        wait(0);
+        exit(0);
+    }
+    else
+    {
+        close(pipe_input[0]);
+        prime_filter(pipe_output);
+    }
 }
 
 int main(int argc, char *argv[])
 {
-  int p[2], pid;
-  pipe(p); // Create the initial pipe
+    int pipe_fd[2], pid;
+    pipe(pipe_fd);
 
-  if ((pid = fork()) < 0)
-  { // Fork error handling
-    close(p[WRITE]);
-    close(p[READ]);
-    exit(1);
-  }
-  else if (pid > 0)
-  {                 // Parent process
-    close(p[READ]); // Parent only writes to the pipe
-
-    // Write numbers from 2 to MAX_NUM to the pipe
-    for (int i = 2; i <= MAX_NUM; i++)
+    if ((pid = fork()) < 0)
     {
-      write(p[WRITE], &i, INT_SIZE);
+        close(pipe_fd[1]);
+        close(pipe_fd[0]);
+        exit(1);
+    }
+    else if (pid > 0)
+    {
+        close(pipe_fd[0]);
+
+        for (int i = 2; i <= 290; i++)
+        {
+            write(pipe_fd[1], &i, 4);
+        }
+
+        close(pipe_fd[1]);
+        wait(0);
+        exit(0);
+    }
+    else
+    {
+        close(pipe_fd[1]);
+        prime_filter(pipe_fd);
     }
 
-    close(p[WRITE]); // Close the write end after sending all numbers
-    wait(0);         // Wait for the child process to finish
-    exit(0);
-  }
-  else
-  {                  // Child process
-    close(p[WRITE]); // Child only reads from the pipe
-    new_proc(p);     // Start the prime filtering process
-  }
-
-  return 0;
+    return 0;
 }
+

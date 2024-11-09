@@ -1,70 +1,46 @@
 #include "kernel/types.h"
-#include "kernel/param.h"
+#include "kernel/stat.h"
 #include "user/user.h"
-
-void execute_line(char *line, char *args[], int skip) {
-    int ws = 1;
-    char **a, *l;
-
-    // Split input line into words based on whitespace
-    a = &args[skip];
-    l = line;
-    while (*l != '\0') {
-        if (*l == ' ') {
-            if (!ws) {
-                *l = '\0';
-                a++;
-            }
-            ws = 1;
-        } else {
-            if (ws) {
-                *a = l;
-            }
-            ws = 0;
-        }
-        l++;
-    }
-
-    int f = fork();
-    if (f < 0) {
-        fprintf(2, "xargs: fork failed\n");
-        exit(1);
-    } else if (f == 0) { // child process
-        exec(args[0], args);
-        // If exec fails, print an error and exit
-        fprintf(2, "xargs: exec failed\n");
-        exit(1);
-    } else { // parent process
-        wait((int *)0);
-    }
-}
+#include "kernel/param.h"
 
 int main(int argc, char *argv[]) {
-    char *args[MAXARG] = { 0 };
-    char buf[512], *b;
-    b = buf;
+    char buf[512];
+    char *args[MAXARG];
+    int i, n;
+    int pid;
 
-    // Copy command-line arguments into args array for exec
-    for (int i = 1; i < argc; i++) {
-        args[i - 1] = argv[i];
+    if (argc < 2) {
+        fprintf(2, "Usage: xargs <command>...\n");
+        exit(1);
     }
 
-    // Read each line of input
-    while (read(0, b, 1) > 0) {
-        if (*b == '\n') {
-            *b = '\0';  // Null-terminate the line
-            execute_line(buf, args, argc - 1); // Execute command with line arguments
-            b = buf; // Reset buffer pointer to start for the next line
-        } else {
-            b++;
+    for (i = 0; i < argc - 1; i++) {
+        args[i] = argv[i + 1];
+    }
+
+    while (1) {
+        n = 0;
+        while (n < sizeof(buf) - 1) {
+            if (read(0, buf + n, 1) != 1) break;
+            if (buf[n] == '\n') {
+                buf[n] = 0;
+                break;
+            }
+            n++;
         }
+        
+        if (n == 0) break;
+
+        args[argc - 1] = buf;
+
+        if ((pid = fork()) == 0) {
+            exec(args[0], args);
+            fprintf(2, "xargs: exec %s failed\n", args[0]);
+            exit(1);
+        }
+        
+        wait(0);
     }
 
-    // Execute final line if not followed by newline
-    if (b != buf) {
-        *b = '\0';
-        execute_line(buf, args, argc - 1);
-    }
-    
     exit(0);
 }

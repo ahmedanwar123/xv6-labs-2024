@@ -1,57 +1,32 @@
-#include "types.h"
-#include "stat.h"
-#include "user.h"
+#include "kernel/types.h"
+#include "kernel/stat.h"
+#include "user/user.h"
 
-int main(int argc, char *argv[])
-{
-    int parent_to_child[2]; // Pipe for parent to child communication
-    int child_to_parent[2]; // Pipe for child to parent communication
-    char recv_buf[5];       // Buffer to store received data
+int main(int argc, char *argv[]) {
+    int pipe_fd[2];      
+    char buffer[2];      
 
-    // Create two pipes
-    pipe(parent_to_child);
-    pipe(child_to_parent);
-
-    if (fork() == 0)
-    { // Child process
-        // Close unused ends of the pipes
-        close(parent_to_child[1]); // Close write end of parent-to-child pipe
-        close(child_to_parent[0]); // Close read end of child-to-parent pipe
-
-        // Read "ping" from the parent
-        read(parent_to_child[0], recv_buf, 4);
-        recv_buf[4] = '\0'; // Null-terminate the string
-        printf("%d: received %s\n", getpid(), recv_buf);
-
-        // Send "pong" to the parent
-        write(child_to_parent[1], "pong", 4);
-
-        // Close the remaining pipe ends
-        close(parent_to_child[0]);
-        close(child_to_parent[1]);
-
-        exit(0); // Exit child process
+    if (pipe(pipe_fd) < 0) {
+        printf("Failed to create pipe\n");
+        exit(1);         
     }
-    else
-    { // Parent process
-        // Close unused ends of the pipes
-        close(parent_to_child[0]); // Close read end of parent-to-child pipe
-        close(child_to_parent[1]); // Close write end of child-to-parent pipe
 
-        // Send "ping" to the child
-        write(parent_to_child[1], "ping", 4);
+    if (fork() == 0) {   
+        close(pipe_fd[1]); 
+        read(pipe_fd[0], buffer, 1); 
+        printf("%d: received ping\n", getpid());
+        write(pipe_fd[1], "p", 1);  
+        close(pipe_fd[0]);
+        exit(0);         
+    } else {
+        close(pipe_fd[0]); 
+        write(pipe_fd[1], "i", 1);  
+        close(pipe_fd[1]); 
 
-        // Read "pong" from the child
-        read(child_to_parent[0], recv_buf, 4);
-        recv_buf[4] = '\0'; // Null-terminate the string
-        printf("%d: received %s\n", getpid(), recv_buf);
-
-        // Close the remaining pipe ends
-        close(parent_to_child[1]);
-        close(child_to_parent[0]);
-
-        // Wait for the child process to avoid zombie
-        wait(0);
-        exit(0); // Exit parent process
+        wait((int*)0); 
+        read(pipe_fd[0], buffer, 1);
+        printf("%d: received pong\n", getpid());
+        close(pipe_fd[0]);
+        exit(0);        
     }
 }

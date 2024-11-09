@@ -1,23 +1,14 @@
-#include "types.h"
-#include "user.h"
+#include "kernel/types.h"
+#include "user/user.h"
 
-int main(int argc, char *argv[])
-{
-  int sleep_sec;
-  if (argc < 2)
-  {
-    fprintf(2, "Usage: sleep seconds\n");
-    exit(1);
-  }
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: sleep <ticks>\n");
+        exit(1);  // Exit with status 1 to indicate an error
+    }
 
-  sleep_sec = atoi(argv[1]);
-  if (sleep_sec > 0)
-  {
-    sleep(sleep_sec);
-  }
-  else
-  {
-    fprintf(2, "Invalid interval %s\n", argv[1]);
-  }
-  exit(0);
+    int ticks = atoi(argv[1]);
+    sleep(ticks);
+    exit(0);  // Normal exit
 }
+

@@ -1,96 +1,63 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
-#include "kernel/fcntl.h"
-#include "kernel/fs.h"
 #include "user/user.h"
+#include "kernel/fs.h"
 
-void usage()
-{
-    fprintf(1, "usage: find path filename\n");
-}
-
-char *get_basename(char *path)
-{
-    char *base = path;
-    for (char *p = path; *p; p++)
-    {
-        if (*p == '/')
-        {
-            base = p + 1;
-        }
-    }
-    return base;
-}
-
-void find(char *path, char *expression)
-{
+void find(const char *path, const char *filename) {
+    char buf[512], *p;
     int fd;
-    struct stat st;
     struct dirent de;
+    struct stat st;
 
-    if ((fd = open(path, O_RDONLY)) < 0)
-    {
+    if ((fd = open(path, 0)) < 0) {
         fprintf(2, "find: cannot open %s\n", path);
         return;
     }
 
-    if (fstat(fd, &st) < 0)
-    {
+    if (fstat(fd, &st) < 0) {
         fprintf(2, "find: cannot stat %s\n", path);
         close(fd);
         return;
     }
 
-    if (st.type == T_FILE)
-    {
-        if (strcmp(get_basename(path), expression) == 0)
-        {
-            fprintf(1, "%s\n", path);
-        }
+    if (st.type != T_DIR) {
+        fprintf(2, "find: %s is not a directory\n", path);
         close(fd);
         return;
     }
 
-    if (st.type == T_DIR)
-    {
-        char newpath[512];
-        int path_len = strlen(path);
+    strcpy(buf, path);
+    p = buf + strlen(buf);
+    *p++ = '/';
 
-        // Ensure there's enough space in `newpath` for the path + "/" + filename
-        if (path_len + 1 + DIRSIZ + 1 > sizeof(newpath))
-        {
-            fprintf(2, "find: path too long\n");
-            close(fd);
-            return;
+    while (read(fd, &de, sizeof(de)) == sizeof(de)) {
+        if (de.inum == 0) continue;
+        if (strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0) continue;
+
+        memmove(p, de.name, DIRSIZ);
+        p[DIRSIZ] = 0;
+
+        if (stat(buf, &st) < 0) {
+            fprintf(2, "find: cannot stat %s\n", buf);
+            continue;
         }
 
-        strcpy(newpath, path);
-        newpath[path_len] = '/';
-        char *p = newpath + path_len + 1;
-
-        while (read(fd, &de, sizeof(de)) == sizeof(de))
-        {
-            if (de.inum == 0 || strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0)
-            {
-                continue;
-            }
-            memmove(p, de.name, DIRSIZ);
-            p[DIRSIZ] = 0;
-            find(newpath, expression);
+        if (st.type == T_DIR) {
+            find(buf, filename);
+        } else if (st.type == T_FILE && strcmp(de.name, filename) == 0) {
+            printf("%s\n", buf);
         }
     }
 
     close(fd);
 }
 
-int main(int argc, char *argv[])
-{
-    if (argc != 3)
-    {
-        usage();
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(2, "Usage: find <path> <filename>\n");
         exit(1);
     }
-
+    
     find(argv[1], argv[2]);
     exit(0);
 }
