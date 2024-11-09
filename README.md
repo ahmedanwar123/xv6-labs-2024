@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository contains the implementation of the xv6 operating system labs, aimed at enhancing understanding of operating systems concepts. The xv6 is a simple Unix-like teaching operating system developed at MIT, which serves as a useful platform for exploring fundamental OS principles.
+This repository contains the implementation of the xv6 operating system labs, which aim to enhance understanding of operating system concepts. Xv6 is a simple Unix-like teaching operating system developed at MIT, which serves as a useful platform for exploring fundamental OS principles.
 
 ## Getting Started
 
@@ -24,6 +24,7 @@ To get started with xv6-labs, follow the steps below:
    ```bash
    git clone https://github.com/ahmedanwar123/xv6-labs-2024.git
    cd xv6-labs-2024
+   git checkout lap1part1
    ```
 2. Build the project:
 
