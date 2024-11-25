@@ -22,11 +22,11 @@ int main(int argc, char *argv[])
     char attempt[9];
 
     // Brute-force guess the pattern in format "xyz.xyz"
-    for (char c1 = 'e'; c1 <= 'z'; c1++)
+    for (char c1 = 'a'; c1 <= 'z'; c1++)
     {
-        for (char c2 = 'b'; c2 <= 'z'; c2++)
+        for (char c2 = 'a'; c2 <= 'z'; c2++)
         {
-            for (char c3 = 'b'; c3 <= 'z'; c3++)
+            for (char c3 = 'a'; c3 <= 'z'; c3++)
             {
                 generate_patterned_secret(attempt, c1, c2, c3);
                 if (write(2, attempt, 8) == 8)
