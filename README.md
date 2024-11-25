@@ -24,7 +24,7 @@ To get started with xv6-labs, follow the steps below:
    ```bash
    git clone https://github.com/ahmedanwar123/xv6-labs-2024.git
    cd xv6-labs-2024
-   git checkout syscall
+   git checkout pgtbl
    ```
 2. Build the project:
 
@@ -36,3 +36,7 @@ To get started with xv6-labs, follow the steps below:
    ```bash
    make qemu
    ```
+
+- **Changes in this lab**:
+  - add usyscall
+  - add pte print

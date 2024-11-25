@@ -31,7 +31,7 @@ kvmmake(void)
   kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // PLIC
-  kvmmap(kpgtbl, PLIC, PLIC, 0x4000000, PTE_R | PTE_W);
+  kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
   kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
@@ -291,6 +291,38 @@ freewalk(pagetable_t pagetable)
     }
   }
   kfree((void*)pagetable);
+}
+void
+print_pagetable(int index , int depth , uint64 pte , uint64 pa){
+    for(int i = 0; i < depth; ++i) {
+        printf(".. ");
+    }
+    printf("..");
+    printf("%d: pte %p pa %p\n", index, pte, pa);
+}
+void
+walk_and_print(pagetable_t pagetable, int depth)
+{
+    // there are 2^9 = 512 PTEs in a page table.
+    for(int i = 0; i < 512; i++){
+        pte_t pte = pagetable[i];
+        if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+            // this PTE points to a lower-level page table.
+            uint64 child = PTE2PA(pte);
+            print_pagetable(i,depth,pte,child);
+            walk_and_print((pagetable_t)child, depth+1);
+        } else if(pte & PTE_V){
+            uint64 child = PTE2PA(pte);
+            print_pagetable(i,depth,pte,child);
+        }
+    }
+}
+
+void
+vmprint(pagetable_t pagetable)
+{
+    printf("page table %p\n", pagetable);
+    walk_and_print(pagetable, 0);
 }
 
 // Free user memory pages,

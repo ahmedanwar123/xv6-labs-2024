@@ -44,7 +44,7 @@ OBJS_KCSAN += \
 	$K/kcsan.o
 endif
 
-ifeq ($(LAB),lock)
+ifeq ($(LAB),$(filter $(LAB), lock))
 OBJS += \
 	$K/stats.o\
 	$K/sprintf.o
@@ -55,6 +55,7 @@ ifeq ($(LAB),net)
 OBJS += \
 	$K/e1000.o \
 	$K/net.o \
+	$K/sysnet.o \
 	$K/pci.o
 endif
 
@@ -95,14 +96,7 @@ endif
 CFLAGS += $(XCFLAGS)
 CFLAGS += -MD
 CFLAGS += -mcmodel=medany
-# CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -fno-common -nostdlib
-CFLAGS += -fno-builtin-strncpy -fno-builtin-strncmp -fno-builtin-strlen -fno-builtin-memset
-CFLAGS += -fno-builtin-memmove -fno-builtin-memcmp -fno-builtin-log -fno-builtin-bzero
-CFLAGS += -fno-builtin-strchr -fno-builtin-exit -fno-builtin-malloc -fno-builtin-putc
-CFLAGS += -fno-builtin-free
-CFLAGS += -fno-builtin-memcpy -Wno-main
-CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
+CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
@@ -147,7 +141,7 @@ tags: $(OBJS) _init
 
 ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 
-ifeq ($(LAB),lock)
+ifeq ($(LAB),$(filter $(LAB), lock))
 ULIB += $U/statistics.o
 endif
 
@@ -171,10 +165,7 @@ $U/_forktest: $U/forktest.o $(ULIB)
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc $(XCFLAGS) -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
 
-# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
-# that disk image changes after first build are persistent until clean.  More
-# details:
-# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
+
 .PRECIOUS: %.o
 
 UPROGS=\
@@ -194,24 +185,11 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-	$U/_sleep\
-	$U/_pingpong\
-	$U/_primes\
-	$U/_find\
-	$U/_xargs\
-	$U/_trace\
-	$U/_attack\
-	$U/_attacktest\
-	$U/_secret\
 
-ifeq ($(LAB),syscall)
-UPROGS += \
-	$U/_attack\
-	$U/_attacktest\
-	$U/_secret
-endif
 
-ifeq ($(LAB),lock)
+
+
+ifeq ($(LAB),$(filter $(LAB), lock))
 UPROGS += \
 	$U/_stats
 endif
@@ -270,7 +248,7 @@ endif
 
 ifeq ($(LAB),net)
 UPROGS += \
-	$U/_nettest
+	$U/_nettests
 endif
 
 UEXTRA=
@@ -284,12 +262,14 @@ fs.img: mkfs/mkfs README $(UEXTRA) $(UPROGS)
 
 -include kernel/*.d user/*.d
 
-clean:
-	rm -rf *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.dSYM *.zip *.pcap \
+clean: 
+	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*/*.o */*.d */*.asm */*.sym \
-	$U/initcode $U/initcode.out $U/usys.S $U/_* \
-	$K/kernel \
-	mkfs/mkfs fs.img .gdbinit __pycache__ xv6.out* \
+	$U/initcode $U/initcode.out $K/kernel fs.img \
+	mkfs/mkfs .gdbinit \
+        $U/usys.S \
+	$(UPROGS) \
+	*.zip \
 	ph barrier
 
 # try to generate a unique GDB port
@@ -305,8 +285,7 @@ ifeq ($(LAB),fs)
 CPUS := 1
 endif
 
-FWDPORT1 = $(shell expr `id -u` % 5000 + 25999)
-FWDPORT2 = $(shell expr `id -u` % 5000 + 30999)
+FWDPORT = $(shell expr `id -u` % 5000 + 25999)
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
@@ -314,7 +293,7 @@ QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 ifeq ($(LAB),net)
-QEMUOPTS += -netdev user,id=net0,hostfwd=udp::$(FWDPORT1)-:2000,hostfwd=udp::$(FWDPORT2)-:2001 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
+QEMUOPTS += -netdev user,id=net0,hostfwd=udp::$(FWDPORT)-:2000 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
 QEMUOPTS += -device e1000,netdev=net0,bus=pcie.0
 endif
 
@@ -332,11 +311,12 @@ ifeq ($(LAB),net)
 # try to generate a unique port for the echo server
 SERVERPORT = $(shell expr `id -u` % 5000 + 25099)
 
-endif
+server:
+	python3 server.py $(SERVERPORT)
 
-##
-##  FOR testing lab grading script
-##
+ping:
+	python3 ping.py $(FWDPORT)
+endif
 
 ifneq ($(V),@)
 GRADEFLAGS += -v
@@ -350,10 +330,6 @@ grade:
 	@$(MAKE) clean || \
           (echo "'make clean' failed.  HINT: Do you have another running instance of xv6?" && exit 1)
 	./grade-lab-$(LAB) $(GRADEFLAGS)
-
-##
-## FOR submissions
-##
 
 submit-check:
 	@if ! test -d .git; then \
