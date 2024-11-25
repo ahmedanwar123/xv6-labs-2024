@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // Allocate a page of memory
+    // Allocate memory and store the secret at a fixed offset
     char *mem = sbrk(4096);
     if (mem == (char *)-1)
     {
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     char *secret_loc = mem + 32;
     memmove(secret_loc, argv[1], 8);
 
-    // Hold the memory briefly
+    // Simulate holding the memory briefly
     sleep(1);
 
     exit(0);
