@@ -200,8 +200,8 @@ UPROGS=\
 	$U/_find\
 	$U/_xargs\
 	$U/_trace\
-
-
+	$U/_attack\
+	$U/_attacktest\
 
 ifeq ($(LAB),syscall)
 UPROGS += \
