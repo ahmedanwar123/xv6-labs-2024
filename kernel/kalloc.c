@@ -14,18 +14,16 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
-struct run
-{
+struct run {
   struct run *next;
 };
 
-struct
-{
+struct {
   struct spinlock lock;
   struct run *freelist;
 } kmem[NCPU];
-
-void kinit()
+void
+kinit()
 {
   char buf[10];
   for (int i = 0; i < NCPU; i++)
@@ -33,37 +31,42 @@ void kinit()
     snprintf(buf, 10, "kmem_CPU%d", i);
     initlock(&kmem[i].lock, buf);
   }
-  freerange(end, (void *)PHYSTOP);
+  freerange(end, (void*)PHYSTOP);
 }
 
-void freerange(void *pa_start, void *pa_end)
+void
+freerange(void *pa_start, void *pa_end)
 {
+  push_off();
+
   char *p;
-  p = (char *)PGROUNDUP((uint64)pa_start);
-  for (; p + PGSIZE <= (char *)pa_end; p += PGSIZE)
+  p = (char*)PGROUNDUP((uint64)pa_start);
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
     kfree(p);
+  
+  pop_off();
 }
 
-// Free the page of physical memory pointed at by pa,
+// Free the page of physical memory pointed at by v,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
-void kfree(void *pa)
+void
+kfree(void *pa)
 {
   struct run *r;
 
-  if (((uint64)pa % PGSIZE) != 0 || (char *)pa < end || (uint64)pa >= PHYSTOP)
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
-  r = (struct run *)pa;
+  r = (struct run*)pa;
 
   push_off();
   int cpu = cpuid();
   pop_off();
-
   acquire(&kmem[cpu].lock);
   r->next = kmem[cpu].freelist;
   kmem[cpu].freelist = r;
@@ -84,27 +87,22 @@ kalloc(void)
 
   acquire(&kmem[cpu].lock);
   r = kmem[cpu].freelist;
-  if (r)
+  if(r)
     kmem[cpu].freelist = r->next;
-  else
-  { // steal pages from other CPU
-    struct run *tmp;
-    for (int i = 0; i < NCPU; i++)
+  else // steal page from other CPU
+  {
+    struct run* tmp;
+    for (int i = 0; i < NCPU; ++i)
     {
-      if (i == cpu)
-        continue;
+      if (i == cpu) continue;
       acquire(&kmem[i].lock);
       tmp = kmem[i].freelist;
-      if (tmp == 0)
-      {
+      if (tmp == 0) {
         release(&kmem[i].lock);
         continue;
-      }
-      else
-      {
-        // Try to steal up to 1024 pages
-        for (int j = 0; j < 1024; j++)
-        {
+      } else {
+        for (int j = 0; j < 1024; j++) {
+          // steal 1024 pages
           if (tmp->next)
             tmp = tmp->next;
           else
@@ -123,7 +121,7 @@ kalloc(void)
   }
   release(&kmem[cpu].lock);
 
-  if (r)
-    memset((char *)r, 5, PGSIZE); // fill with junk
-  return (void *)r;
+  if(r)
+    memset((char*)r, 5, PGSIZE); // fill with junk
+  return (void*)r;
 }
