@@ -14,8 +14,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    sleep_sec = atoi(argv[1]);
-    if (sleep_sec > 0)
+    sleep_sec = atoi(argv[1] + 1); 
+    if (argv[1][0] == '-') sleep_sec *= -1;
+    if (sleep_sec >= 0)
     {
         sleep(sleep_sec);
     }
